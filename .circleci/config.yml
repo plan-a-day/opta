@@ -1148,6 +1148,50 @@ jobs:
                 paths:
                     - .opta
                 root: ~/
+    download-opta-version-v1:
+        environment:
+            OPTA_DISABLE_REPORTING: "true"
+        executor: ubuntu-machine
+        steps:
+            - run:
+                command: |
+                    git config --global user.email "runx-ci@runx.dev"
+                    git config --global user.name "Runx CI"
+                name: Set git user
+            - run:
+                command: VERSION=<< pipeline.parameters.opta-version-v1 >> /bin/bash -c "$(curl -fsSL https://docs.opta.dev/install.sh)"
+                name: Download Latest Opta Binary
+            - install-opta-dependencies
+            - run:
+                command: |
+                    $HOME/.opta/opta version
+                name: Check Opta Version
+            - persist_to_workspace:
+                paths:
+                    - .opta
+                root: ~/
+    download-opta-version-v2:
+        environment:
+            OPTA_DISABLE_REPORTING: "true"
+        executor: ubuntu-machine
+        steps:
+            - run:
+                command: |
+                    git config --global user.email "runx-ci@runx.dev"
+                    git config --global user.name "Runx CI"
+                name: Set git user
+            - run:
+                command: VERSION=<< pipeline.parameters.opta-version-v2 >> /bin/bash -c "$(curl -fsSL https://docs.opta.dev/install.sh)"
+                name: Download Latest Opta Binary
+            - install-opta-dependencies
+            - run:
+                command: |
+                    $HOME/.opta/opta version
+                name: Check Opta Version
+            - persist_to_workspace:
+                paths:
+                    - .opta
+                root: ~/
     gcp-create-env:
         environment:
             OPTA_DISABLE_REPORTING: "true"
@@ -2001,21 +2045,6 @@ jobs:
             - run:
                 command: make security_tests
                 name: Security
-    regula-lint:
-        executor: ubuntu-machine
-        steps:
-            - checkout-opta
-            - run:
-                command: |
-                    cd config
-                    wget -O regula_1.0.0_Linux_x86_64.tar.gz https://github.com/fugue/regula/releases/download/v1.0.0/regula_1.0.0_Linux_x86_64.tar.gz
-                    tar -xvf regula_1.0.0_Linux_x86_64.tar.gz
-                name: Install regula
-            - run:
-                command: |-
-                    cd config
-                    ./regula run --include config.rego tf_modules
-                name: Run regula
     terraform-formatter:
         executor: ubuntu-machine
         steps:
@@ -2048,6 +2077,12 @@ parameters:
     ci-use-diff-env:
         default: false
         type: boolean
+    opta-version-v1:
+        default: ""
+        type: string
+    opta-version-v2:
+        default: ""
+        type: string
     run-ci:
         default: false
         type: boolean
@@ -2091,6 +2126,9 @@ parameters:
         default: false
         type: boolean
     run-service-mesh-e2e:
+        default: false
+        type: boolean
+    run-version-compare:
         default: false
         type: boolean
     test:
@@ -2281,7 +2319,6 @@ workflows:
             - lint
             - python-security
             - terraform-formatter
-            - regula-lint
             - pytest
         when: << pipeline.parameters.run-ci >>
     run-create-and-destroy:
@@ -2704,5 +2741,11 @@ workflows:
                 requires:
                     - gcp-opta-example-destroy-svcs
         when: << pipeline.parameters.run-service-mesh-e2e >>
+    run-version-compare:
+        jobs:
+            - get-all-parameter-values
+            - download-opta-version-v1
+            - download-opta-version-v2
+        when: << pipeline.parameters.run-version-compare >>
     version: 2
 
